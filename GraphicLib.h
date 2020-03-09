@@ -14,6 +14,7 @@ public:
 	GraphicLib& barycentric_triangle(Vector2i *pts, TGAProcessor &image, TGAColor color);
 	GraphicLib& barycentric_triangle(Vector3f *pts, TGAProcessor &image, TGAColor color, float* zbuffer, int width);
 	GraphicLib& triangle_with_texture(Vector3f *pts, Vector2f *uv, TGAProcessor &image, TGAProcessor &texture, float intensity, float* zbuffer, int width);
+	GraphicLib& triangle_gouroud(Vector3i t0, Vector3i t1, Vector3i t2, float ity0, float ity1, float ity2, TGAProcessor &image, int *zbuffer, int width, int height);
 
 private:
 };

@@ -2,16 +2,15 @@
 #define __GEOMETRY_H_
 #include <iostream>
 #include <cmath>
+#include <vector>
+
+class Matrix;
 
 template<typename T>
 class Vector2{
 public:
-	Vector2() { x = y = 0; }
-	Vector2(T xx, T yy) :x(xx), y(yy) {}
-	Vector2& operator=(const Vector2<T> &v) {
-		if (this != &v) { x = v.x; y = v.y; }
-		return *this;
-	}
+	Vector2<T>():x(T()), y(T()){}
+	Vector2<T>(T xx, T yy) :x(xx), y(yy) {}
 	
 	Vector2<T> operator+(const Vector2<T> &v) const{
 		return Vector2<T>(x + v.x, y + v.y);
@@ -51,8 +50,10 @@ template<typename T>
 class Vector3{
 public:
 	T x, y, z;
-	Vector3() { x = y = z = 0; }
-	Vector3(T xx, T yy, T zz) :x(xx), y(yy), z(zz) {}
+	Vector3<T>():x(T()),y(T()),z(T()) {}
+	Vector3<T>(T xx, T yy, T zz) :x(xx), y(yy), z(zz) {}
+	Vector3<T>(Matrix m);
+	template<class U> Vector3<T>(const Vector3<U> &v);
 
 	inline Vector3<T> operator+(const Vector3<T> &v) const {
 		return Vector3<T>(x + v.x, y + v.y, z + v.z);
@@ -110,12 +111,42 @@ typedef Vector2<int> Vector2i;
 typedef Vector3<float> Vector3f;
 typedef Vector3<int> Vector3i;
 
-//template<typename T>
-//T cross(T v1, T v2) { return v1 * v2; }
+template<> template<>
+Vector3<int>::Vector3(const Vector3<float> &v);
+template<> template<>
+Vector3<float>::Vector3(const Vector3<int> &v);
 
 template<typename T>
 inline Vector3<T> cross(Vector3<T> v1, Vector3<T> v2) {
 	return Vector3<T>(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x);
+}
+
+//-----------<Matrix class>---------------//
+class Matrix {
+public:
+	Matrix(int r = 4, int c = 4) :m(std::vector<std::vector<float>>(r,std::vector<float>(c, 0.f))),rows(r), cols(c) {};
+	Matrix(Vector3f v);
+	int row_size();
+	int col_size();
+	static Matrix identity(int dimensions);
+	std::vector<float> &operator[](const int i);
+	Matrix operator*(const Matrix& a);
+	Matrix transpose();
+	Matrix inverse();
+
+	std::vector<std::vector<float>> m;
+	int rows, cols;
+};
+
+inline std::ostream &operator<<(std::ostream &os, Matrix& m) {
+	for (int i = 0; i < m.rows; i++) {
+		for (int j = 0; j < m.cols; j++) {
+			os << m[i][j];
+			if (i < m.col_size()) os << "\t";
+		}
+		os << std::endl;
+	}
+	return os;
 }
 
 #endif // !__GEOMETRY_H_

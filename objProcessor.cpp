@@ -42,20 +42,19 @@ bool objPcs::loadObj() {
 			normal_.push_back(v);
 		}
 		else if (!linebuf.compare(0, 1, "f")) {
-			std::vector<int> f;
-			std::vector<int> uv;
-			int idx, iuv, itrash;
+			std::vector<Vector3i> f;
+			Vector3i temp;
 			iss >> trash;
-			while (iss >> idx >> trash >> iuv >> trash >> itrash) {
-				idx--;
-				iuv--;
-				f.push_back(idx);
-				uv.push_back(iuv);
+			//TODO make Vector dimension to get vector size
+			while (iss >> temp[0] >> trash >> temp[1] >> trash >> temp[2]) {
+				for (int i = 0; i < 3; i++)temp[i]--;
+				f.push_back(temp);
 			}
 			face_.push_back(f);
-			uv_.push_back(uv);
 		}
 	}
+	std::cout << "Total vertices: " << vertex_.size() << std::endl;
+	std::cout << "Total faces: " << face_.size() << std::endl;
 	return true;
 }
 
@@ -64,28 +63,35 @@ int objPcs::getFaceNumber() {
 }
 
 Vector3f objPcs::getVertex(int i) {
-	assert(i < vertex_.size());
+	assert(("vertex out of bound. ",i < vertex_.size()));
 	return vertex_[i];
 }
 
 Vector3f objPcs::getTex(int i) {
-	assert(i < texcoord_.size());
+	assert(("tex coords out of bound. ", i < texcoord_.size()));
 	return texcoord_[i];
 }
 
-Vector3f objPcs::getNorm(int i) {
-	assert(i < normal_.size());
-	return normal_[i];
+Vector3f objPcs::getNorm(int iface, int ivertex) {
+	assert(("face size out of bound. ", iface < face_.size()));
+	assert(("vertex size out of bound. ", ivertex < vertex_.size()));
+	int idx = face_[iface][ivertex][2];
+	return normal_[idx].normalize();
 }
 
-std::vector<int> objPcs::face(int i) {
-	assert(i < face_.size());
-	return face_[i];
+std::vector<int> objPcs::face(int idx) {
+	assert(("face size out of bound. ", idx < face_.size()));
+	std::vector<int> face;
+	for (int i = 0; i < face_[idx].size(); i++)face.push_back(face_[idx][i][0]);
+	return face;
 }
 
-std::vector<int> objPcs::uv(int i) {
-	assert(i < uv_.size());
-	return uv_[i];
+//TODO load texture
+std::vector<int> objPcs::uv(int iface, int ivertex) {
+	assert(("face size out of bound. ",iface < face_.size()));
+	assert(("vertex size out of bound. ",ivertex < vertex_.size()));
+	int idx = face_[iface][ivertex][1];
+	return uv_[0];
 }
 
 objPcs::~objPcs() {

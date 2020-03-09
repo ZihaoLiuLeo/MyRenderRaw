@@ -17,7 +17,8 @@ public:
 		objpcs(objPcs) {}
 	bool drawMesh();
 	bool triangle_draw();
-	bool triangle_zbuffer_draw();
+	//bool triangle_zbuffer_draw();
+	bool triangle_lookat_draw();
 	Vector3f world2screen(Vector3f v);
 
 	std::string& output() { return output_; }

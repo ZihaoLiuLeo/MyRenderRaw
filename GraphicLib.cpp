@@ -138,6 +138,7 @@ GraphicLib& GraphicLib::barycentric_triangle(
 	return *this;
 }
 
+// flat shading with triangle facets
 GraphicLib& GraphicLib::triangle_with_texture(
 	Vector3f *pts,
 	Vector2f *uv,
@@ -178,6 +179,38 @@ GraphicLib& GraphicLib::triangle_with_texture(
 	return *this;
 }
 
+//scanline interpolation
+GraphicLib& GraphicLib::triangle_gouroud(Vector3i t0, Vector3i t1, Vector3i t2, float ity0, float ity1, float ity2, TGAProcessor &image, int *zbuffer, int width, int height) {
+	if (t0.y == t1.y&& t0.y == t2.y)return *this;
+	if (t0.y > t1.y) { std::swap(t0, t1); std::swap(ity0, ity1); }
+	if (t0.y > t2.y) { std::swap(t0, t2); std::swap(ity0, ity2); }
+	if (t1.y > t2.y) { std::swap(t1, t2); std::swap(ity1, ity2); }
+
+	int total_height = t2.y - t0.y;
+	for (int i = 0; i < total_height; i++) {
+		bool second_half = i > t1.y - t0.y || t1.y == t0.y; // need to debug
+		int segment_height = second_half ? t2.y - t1.y : t1.y - t0.y;
+		float alpha = (float)i / total_height;
+		float beta = (float)(i - (second_half ? t1.y - t0.y : 0)) / segment_height;
+		Vector3i A = t0 + Vector3f(t2 - t0)*alpha;
+		Vector3i B = second_half ? t1 + Vector3f(t2 - t1)*beta : t0 + Vector3f(t1 - t0)*beta; // buggy place, beta alpha switch
+		float ityA = ity0 + (ity2 - ity0)*alpha;
+		float ityB = second_half ? ity1 + (ity2 - ity1)*beta : ity0 + (ity1 - ity0)*beta;
+		if (A.x > B.x) { std::swap(A, B); std::swap(ityA, ityB); }
+		for (int j = A.x; j <= B.x; j++) {
+			float phi = B.x == A.x ? 1. : (float)(j - A.x) / (B.x - A.x);
+			Vector3i p = Vector3f(A) + Vector3f(B - A)*phi;
+			float ityP = ityA + (ityB - ityA)*phi;
+			int idx = p.x + p.y*width;
+			if (p.x >= width || p.y >= height || p.y < 0 || p.x < 0) continue;
+			if (zbuffer[idx] < p.z) {
+				zbuffer[idx] = p.z;
+				image.set(p.x, p.y, TGAColor(255, 255, 255)*ityP);
+			}
+		}
+	}
+	return *this;
+}
 
 #ifdef TEST_GL
 

@@ -18,14 +18,15 @@ public:
 	int getFaceNumber();
 	Vector3f getVertex(int i);
 	Vector3f getTex(int i);
-	Vector3f getNorm(int i);
+	Vector3f getNorm(int iface, int ivertex);
 	std::vector<int> face(int i);
-	std::vector<int> uv(int i);
+	std::vector<int> uv(int iface, int ivertex);
 
 	~objPcs();
 private:
 	std::vector<Vector3f> vertex_;
-	std::vector<std::vector<int>> face_;
+	// face: vertex/uv/normal
+	std::vector<std::vector<Vector3i>> face_;
 	std::vector<std::vector<int>> uv_;
 	std::vector<Vector3f> texcoord_;
 	std::vector<Vector3f> normal_;
