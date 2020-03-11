@@ -24,40 +24,42 @@ struct TGA_HEADER
 class TGAColor
 {
 public:
-	union
-	{
-		struct
-		{
-			// be careful with the order
-			unsigned char b, g, r, a;
-		};
-		unsigned char raw[4];
-		unsigned int val;
-	};
-	int bytespp;
-	TGAColor() :val(0), bytespp(1) {};
-	TGAColor(unsigned char R, unsigned char G, unsigned char B, unsigned char A=255) :r(R), g(G), b(B), a(A), bytespp(4) {};
-	TGAColor(int v, int bpp) :val(v), bytespp(bpp) {};
-	TGAColor(const TGAColor &color) :val(color.val), bytespp(color.bytespp) {};
-	TGAColor(const unsigned char *p, int bpp) :val(0), bytespp(bpp)
-	{
-		for (int i = 0; i < bpp; i++)
-			raw[i] = p[i];
+	unsigned char bgra[4];
+	unsigned char bytespp;
+
+	TGAColor() : bgra(), bytespp(1) {
+		for (int i = 0; i < 4; i++) bgra[i] = 0;
 	}
-	TGAColor& operator=(const TGAColor &color)
-	{
-		if (this != &color)
-		{
-			bytespp = color.bytespp;
-			val = color.val;
-		}
-		return *this;
+
+	TGAColor(unsigned char R, unsigned char G, unsigned char B, unsigned char A=255) :bgra(), bytespp(4) {
+		bgra[0] = B;
+		bgra[1] = G;
+		bgra[2] = R;
+		bgra[3] = A;
 	}
-	//be really careful with the order of RGB!!
-	TGAColor operator*(float intensity) const {
-		return TGAColor(r*intensity, g*intensity, b*intensity);
+
+	TGAColor(unsigned char v) :bgra(), bytespp(1) {
+		for (int i = 0; i < 4; i++)bgra[i] = 0;
+		bgra[0] = v;
 	}
 	
+	TGAColor(const unsigned char *p, unsigned char bpp) :bgra(), bytespp(bpp) {
+		for (int i = 0; i < (int)bpp; i++) {
+			bgra[i] = p[i];
+		}
+		for (int i = bpp; i < 4; i++) {
+			bgra[i] = 0;
+		}
+	}
+
+	// lighting bug fixed...
+	// error on intensity greater than  1 and less than 0
+	TGAColor operator*(float intensity) const {
+		TGAColor res = *this;
+		intensity = (intensity > 1.f ? 1.f : (intensity < 0.f ? 0.f : intensity));
+		for (int i = 0; i < 4; i++)res.bgra[i] = bgra[i] * intensity;
+		return res;
+	}
 };
 
 class TGAProcessor

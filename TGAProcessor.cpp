@@ -125,14 +125,14 @@ bool TGAProcessor::load_rle_data(std::ifstream & in)
 		{
 			for (int i = 0; i < chunkheader+1; i++)
 			{
-				in.read((char*)colorbuffer.raw, bytespp);
+				in.read((char*)colorbuffer.bgra, bytespp);
 				if (!in.good())
 				{
 					return false;
 				}
 				for (int t = 0; t < bytespp; t++)
 				{
-					data[currentbyte++] = colorbuffer.raw[t];
+					data[currentbyte++] = colorbuffer.bgra[t];
 				}
 				currentpixel++;
 				if (currentpixel > pixelcount)
@@ -145,7 +145,7 @@ bool TGAProcessor::load_rle_data(std::ifstream & in)
 		else
 		{
 			chunkheader -= 127;
-			in.read((char*)colorbuffer.raw, bytespp);
+			in.read((char*)colorbuffer.bgra, bytespp);
 			if (!in.good())
 			{
 				return false;
@@ -153,7 +153,7 @@ bool TGAProcessor::load_rle_data(std::ifstream & in)
 			for (int i = 0; i < chunkheader; i++)
 			{
 				for (int t = 0; t < bytespp; t++)
-					data[currentbyte++] = colorbuffer.raw[t];
+					data[currentbyte++] = colorbuffer.bgra[t];
 				currentpixel++;
 				if (currentpixel > pixelcount)
 				{
@@ -304,7 +304,7 @@ bool TGAProcessor::set(int x, int y, TGAColor color)
 	{
 		return false;
 	}
-	std::memcpy(data + (x + y * width)*bytespp, color.raw, bytespp);
+	std::memcpy(data + (x + y * width)*bytespp, color.bgra, bytespp);
 	return false;
 }
 

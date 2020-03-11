@@ -193,12 +193,10 @@ bool objViewer::triangle_lookat_draw() {
 		for (int i = 0; i < objpcs->getFaceNumber(); i++) {
 			std::vector<int> face = objpcs->face(i);
 			Vector3f screen_coords[3];
-			Vector3f world_coords[3];
 			float intensity[3];
 			for (int j = 0; j < 3; j++) {
 				Vector3f v = objpcs->getVertex(face[j]);
 				screen_coords[j] = Vector3f(z*Matrix(v));
-				world_coords[j] = v;
 				intensity[j] = objpcs->getNorm(i,j)*light_dir;
 			}
 			gl.triangle_gouroud(
