@@ -124,7 +124,7 @@ inline Vector3<T> cross(Vector3<T> v1, Vector3<T> v2) {
 //-----------<Matrix class>---------------//
 class Matrix {
 public:
-	Matrix(int r = 4, int c = 4) :m(std::vector<std::vector<float>>(r,std::vector<float>(c, 0.f))),rows(r), cols(c) {};
+	Matrix(int r = 4, int c = 4);
 	Matrix(Vector3f v);
 	int row_size();
 	int col_size();
@@ -147,6 +147,13 @@ inline std::ostream &operator<<(std::ostream &os, Matrix& m) {
 		os << std::endl;
 	}
 	return os;
+}
+
+inline Matrix homorize(Vector3f v) {
+	Matrix res{ 4,1 };
+	for (int i = 0; i < 3; i++) res[i][0] = v[i];
+	res[3][0] = 1;
+	return res;
 }
 
 #endif // !__GEOMETRY_H_

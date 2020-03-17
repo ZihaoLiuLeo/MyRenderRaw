@@ -9,6 +9,8 @@ Vector3<int>::Vector3(const Vector3<float>& v):x(int(v.x + .5)), y(int(v.y + .5)
 template<> template<>
 Vector3<float>::Vector3(const Vector3<int>& v) : x(v.x), y(v.y), z(v.z) {}
 
+Matrix::Matrix(int r, int c) : m(std::vector<std::vector<float>>(r, std::vector<float>(c, 0.f))), rows(r), cols(c) {};
+
 Matrix::Matrix(Vector3f v) :m(std::vector<std::vector<float>>(4, std::vector<float>(1, 1.f))), rows(4), cols(1) {
 	m[0][0] = v.x;
 	m[1][0] = v.y;
