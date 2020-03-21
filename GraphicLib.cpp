@@ -3,11 +3,11 @@
 #include <cassert>
 #include <algorithm>
 
-Matrix ModelView;
-Matrix ViewPort;
-Matrix Projection;
+matrix44 ModelView;
+matrix44 ViewPort;
+matrix44 Projection;
 
-void IntBresenhamLine(Vector2i v1, Vector2i v2, TGAProcessor &image, TGAColor color)
+void IntBresenhamLine(vector2i v1, vector2i v2, TGAProcessor &image, TGAColor color)
 {
 	bool steep = false;
 	if (std::abs(v1.x - v2.x)<std::abs(v1.y - v2.y)) { // if the line is steep, we transpose the image 
@@ -33,7 +33,7 @@ void IntBresenhamLine(Vector2i v1, Vector2i v2, TGAProcessor &image, TGAColor co
 }
 
 //simple interpolating way
-void scanline_triangle(Vector2i t0, Vector2i t1, Vector2i t2, TGAProcessor &image, TGAColor color) {
+void scanline_triangle(vector2i t0, vector2i t1, vector2i t2, TGAProcessor &image, TGAColor color) {
 	if (t0.y > t1.y) std::swap(t0, t1);
 	if (t0.y > t2.y) std::swap(t0, t2);
 	if (t1.y > t2.y) std::swap(t1, t2);
@@ -42,8 +42,8 @@ void scanline_triangle(Vector2i t0, Vector2i t1, Vector2i t2, TGAProcessor &imag
 		int segment_height = t1.y - t0.y + 1;
 		float alpha = (float)(y - t0.y) / total_height;
 		float beta = (float)(y - t0.y) / segment_height;
-		Vector2i A = t0 + (t2 - t0)*alpha;
-		Vector2i B = t0 + (t1 - t0)*beta;
+		vector2i A = t0 + (t2 - t0)*alpha;
+		vector2i B = t0 + (t1 - t0)*beta;
 		/*A.y = y;
 		B.y = y;
 		IntBresenhamLine(A, B, image, color);*/
@@ -56,8 +56,8 @@ void scanline_triangle(Vector2i t0, Vector2i t1, Vector2i t2, TGAProcessor &imag
 		int segment_height = t2.y - t1.y + 1;
 		float alpha = (float)(y - t0.y) / total_height;
 		float beta = (float)(y - t1.y) / segment_height;
-		Vector2i A = t0 + (t2 - t0)*alpha;
-		Vector2i B = t1 + (t2-t1)*beta;
+		vector2i A = t0 + (t2 - t0)*alpha;
+		vector2i B = t1 + (t2-t1)*beta;
 		/*A.y = y;
 		B.y = y;
 		IntBresenhamLine(A, B, image, color);*/
@@ -69,59 +69,59 @@ void scanline_triangle(Vector2i t0, Vector2i t1, Vector2i t2, TGAProcessor &imag
 }
 
 // berycentric method to determine if a pixel point is inside a triangle
-Vector3f barycentric_point(Vector2i *pts, Vector2i p) {
+vector3f barycentric_point(vector2f *pts, vector2f p) {
 	assert(pts != nullptr);
-	Vector3f u = cross(Vector3f(pts[2][0]-pts[0][0], pts[1][0]-pts[0][0], pts[0][0]-p[0]), 
-		Vector3f(pts[2][1]-pts[0][1], pts[1][1]-pts[0][1], pts[0][1]-p[1]) );
-	if (std::abs(u[2]) < 1) return Vector3f(-1, 1, 1);
-	return Vector3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	vector3f u = cross(vector3f(pts[2][0]-pts[0][0], pts[1][0]-pts[0][0], pts[0][0]-p[0]), 
+		vector3f(pts[2][1]-pts[0][1], pts[1][1]-pts[0][1], pts[0][1]-p[1]) );
+	if (std::abs(u[2]) < 1e-2) return vector3f(-1, 1, 1);
+	return vector3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-Vector3f barycentric_point(Vector3f *pts, Vector3f p) {
+vector3f barycentric_point(vector3f *pts, vector3f p) {
 	assert(pts != nullptr);
-	Vector3f u = cross(Vector3f(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - p[0]),
-		Vector3f(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - p[1]));
-	if (std::abs(u[2]) < 1) return Vector3f(-1, 1, 1);
-	return Vector3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	vector3f u = cross(vector3f(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - p[0]),
+		vector3f(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - p[1]));
+	if (std::abs(u[2]) < 1) return vector3f(-1, 1, 1);
+	return vector3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void barycentric_triangle(Vector2i *pts, TGAProcessor &image, TGAColor color) {
-	Vector2i bbmin, bbmax;
-	bbmin.x = std::min(pts[0].x, std::min(pts[1].x, pts[2].x));
-	bbmin.y = std::min(pts[0].y, std::min(pts[1].y, pts[2].y));
-	bbmax.x = std::max(pts[0].x, std::max(pts[1].x, pts[2].x));
-	bbmax.y = std::max(pts[0].y, std::max(pts[1].y, pts[2].y));
-	Vector2i p;
-	/*std::cout << "for point: " << std::endl;
-	std::cout << "bound box min x is: " << bbmin.x << " bound box min y is: " << bbmin.y << std::endl;
-	std::cout << "bound box max x is: " << bbmax.x << " bound box max y is: " << bbmax.y << std::endl;*/
-	for (p.x = bbmin.x; p.x <= bbmax.x; p.x++) {
-		for (p.y = bbmin.y; p.y <= bbmax.y; p.y++) {
-			Vector3f bc_screen = barycentric_point(pts, p);
-			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
-			image.set(p.x, p.y, color);
-		}
-	}
-}
+//void barycentric_triangle(vector2i *pts, TGAProcessor &image, TGAColor color) {
+//	vector2i bbmin, bbmax;
+//	bbmin.x = std::min(pts[0].x, std::min(pts[1].x, pts[2].x));
+//	bbmin.y = std::min(pts[0].y, std::min(pts[1].y, pts[2].y));
+//	bbmax.x = std::max(pts[0].x, std::max(pts[1].x, pts[2].x));
+//	bbmax.y = std::max(pts[0].y, std::max(pts[1].y, pts[2].y));
+//	vector2i p;
+//	/*std::cout << "for point: " << std::endl;
+//	std::cout << "bound box min x is: " << bbmin.x << " bound box min y is: " << bbmin.y << std::endl;
+//	std::cout << "bound box max x is: " << bbmax.x << " bound box max y is: " << bbmax.y << std::endl;*/
+//	for (p.x = bbmin.x; p.x <= bbmax.x; p.x++) {
+//		for (p.y = bbmin.y; p.y <= bbmax.y; p.y++) {
+//			vector3f bc_screen = barycentric_point(pts, p);
+//			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
+//			image.set(p.x, p.y, color);
+//		}
+//	}
+//}
 
 void barycentric_triangle(
-	Vector3f *pts,
+	vector3f *pts,
 	TGAProcessor &image, 
 	TGAColor color, 
 	float* zbuffer, 
 	int width) {
-	Vector2i bbmin, bbmax;
+	vector2i bbmin, bbmax;
 	bbmin.x = std::min(pts[0].x, std::min(pts[1].x, pts[2].x));
 	bbmin.y = std::min(pts[0].y, std::min(pts[1].y, pts[2].y));
 	bbmax.x = std::max(pts[0].x, std::max(pts[1].x, pts[2].x));
 	bbmax.y = std::max(pts[0].y, std::max(pts[1].y, pts[2].y));
-	Vector3f p;
+	vector3f p;
 	/*std::cout << "for point: " << std::endl;
 	std::cout << "bound box min x is: " << bbmin.x << " bound box min y is: " << bbmin.y << std::endl;
 	std::cout << "bound box max x is: " << bbmax.x << " bound box max y is: " << bbmax.y << std::endl;*/
 	for (p.x = bbmin.x; p.x <= bbmax.x; p.x+=1) {
 		for (p.y = bbmin.y; p.y <= bbmax.y; p.y+=1) {
-			Vector3f bc_screen = barycentric_point(pts, p);
+			vector3f bc_screen = barycentric_point(pts, p);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			p.z = 0;
 			for (int i = 0; i < 3; i++) p.z += pts[i][2] * bc_screen[i];
@@ -135,25 +135,25 @@ void barycentric_triangle(
 
 // flat shading with triangle facets
 void triangle_with_texture(
-	Vector3f *pts,
-	Vector2f *uv,
+	vector3f *pts,
+	vector2f *uv,
 	TGAProcessor &image,
 	TGAProcessor &texture,
 	float intensity,
 	float* zbuffer,
 	int width) {
-	Vector2i bbmin, bbmax;
+	vector2i bbmin, bbmax;
 	bbmin.x = std::min(pts[0].x, std::min(pts[1].x, pts[2].x));
 	bbmin.y = std::min(pts[0].y, std::min(pts[1].y, pts[2].y));
 	bbmax.x = std::max(pts[0].x, std::max(pts[1].x, pts[2].x));
 	bbmax.y = std::max(pts[0].y, std::max(pts[1].y, pts[2].y));
-	Vector3f p;
+	vector3f p;
 	/*std::cout << "for point: " << std::endl;
 	std::cout << "bound box min x is: " << bbmin.x << " bound box min y is: " << bbmin.y << std::endl;
 	std::cout << "bound box max x is: " << bbmax.x << " bound box max y is: " << bbmax.y << std::endl;*/
 	for (p.x = bbmin.x; p.x <= bbmax.x; p.x += 1) {
 		for (p.y = bbmin.y; p.y <= bbmax.y; p.y += 1) {
-			Vector3f bc_screen = barycentric_point(pts, p);
+			vector3f bc_screen = barycentric_point(pts, p);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			p.z = 0;
 			int u = 0;
@@ -175,7 +175,7 @@ void triangle_with_texture(
 
 //scanline interpolation
 void triangle_gouroud(
-	Vector3i *t, 
+	vector3i *t, 
 	float *intensity_y,
 	TGAProcessor &image, 
 	int *zbuffer, 
@@ -192,14 +192,14 @@ void triangle_gouroud(
 		int segment_height = second_half ? t[2].y - t[1].y : t[1].y - t[0].y;
 		float alpha = (float)i / total_height;
 		float beta = (float)(i - (second_half ? t[1].y - t[0].y : 0)) / segment_height;
-		Vector3i A = t[0] + Vector3f(t[2] - t[0])*alpha;
-		Vector3i B = second_half ? t[1] + Vector3f(t[2] - t[1])*beta : t[0] + Vector3f(t[1] - t[0])*beta; // buggy place, beta alpha switch
+		vector3i A = t[0] + vector3i(vector3f(t[2] - t[0])*alpha);
+		vector3i B = second_half ? t[1] + vector3i(vector3f(t[2] - t[1])*beta) : t[0] + vector3i(vector3f(t[1] - t[0])*beta); // buggy place, beta alpha switch
 		float ityA = intensity_y[0] + (intensity_y[2] - intensity_y[0])*alpha;
 		float ityB = second_half ? intensity_y[1] + (intensity_y[2] - intensity_y[1])*beta : intensity_y[0] + (intensity_y[1] - intensity_y[0])*beta;
 		if (A.x > B.x) { std::swap(A, B); std::swap(ityA, ityB); }
 		for (int j = A.x; j <= B.x; j++) {
 			float phi = B.x == A.x ? 1. : (float)(j - A.x) / (B.x - A.x);
-			Vector3i p = Vector3f(A) + Vector3f(B - A)*phi;
+			vector3i p = vector3f(A) + vector3f(B - A)*phi;
 			float ityP = ityA + (ityB - ityA)*phi;
 			int idx = p.x + p.y*width;
 			if (p.x >= width || p.y >= height || p.y < 0 || p.x < 0) continue;
@@ -212,42 +212,53 @@ void triangle_gouroud(
 }
 
 void triangle(
-	Vector3f* t,
+	vector4f* t,
 	IShader& shader,
 	TGAProcessor& image,
 	int* zbuffer,
 	int width) {
-	Vector2i bbmin, bbmax;
-	bbmin.x = std::min(t[0].x, std::min(t[1].x, t[2].x));
-	bbmin.y = std::min(t[0].y, std::min(t[1].y, t[2].y));
-	bbmax.x = std::max(t[0].x, std::max(t[1].x, t[2].x));
-	bbmax.y = std::max(t[0].y, std::max(t[1].y, t[2].y));
-	Vector3i p;
+	vector2i bbmin, bbmax;
+	bbmin.x = std::min(t[0][0] / t[0][3], std::min(t[1][0] / t[1][3], t[2][0] / t[2][3]));
+	bbmin.y = std::min(t[0][1] / t[0][3], std::min(t[1][1] / t[1][3], t[2][1] / t[2][3]));
+	bbmax.x = std::max(t[0][0] / t[0][3], std::max(t[1][0] / t[1][3], t[2][0] / t[2][3]));
+	bbmax.y = std::max(t[0][1] / t[0][3], std::max(t[1][1] / t[1][3], t[2][1] / t[2][3]));
+	vector2i p;
 	TGAColor color;
-	for (p.x = bbmin.x; p.x <= bbmax.x; p.x++) {
+	for (p.x = bbmin.x; p.x <= bbmax.x; p.x = p.x + 1) {
 		for (p.y = bbmin.y; p.y <= bbmax.y;  p.y++) {
-			Vector3f c = barycentric_point(t, p);
-			if (c.x < 0 || c.y < 0 || c.z < 0) continue;
-			p.z = 0;
+			vector2f pts[3];
+			for (int i = 0; i < 3; i++) { pts[i] = proj<2>(t[i] / t[i][3]); }
+			vector3f c = barycentric_point(pts, p);
+			//  z/w need to be used to calculate the zbuffer depth
+			float z = t[0][2] * c.x + t[1][2] * c.y + t[2][2] * c.z;
+			float w = t[0][3] * c.x + t[1][3] * c.y + t[2][3] * c.z;
+			int depth = std::max(0, std::min(255, int(z / w + .5)));
+			if (c.x < 0 || c.y < 0 || c.z < 0 || zbuffer[p.x+p.y*width]>depth) continue;
+			bool discard = shader.fragment(c, color);
+			if (!discard) {
+				zbuffer[p.x + p.y*width] = depth;
+				image.set(p.x, p.y, color);
+			}
+			/*p.z = 0;
 			for (int i = 0; i < 3; i++)p.z += t[i][2] * c[i];
 			if (zbuffer[p.x + p.y*width] < p.z) {
 				zbuffer[p.x + p.y*width] = p.z;
+				std::cout << p.z << std::endl;
 				bool discard = shader.fragment(c, color);
 				if (!discard) {
 					image.set(p.x, p.y, color);
 				}
-			}
+			}*/
 		}
 	}
 }
 
-void lookat(Vector3f eye, Vector3f center, Vector3f up) {
-	Vector3f z = (eye - center).normalize();
-	Vector3f x = (up^z).normalize();
-	Vector3f y = (z^x).normalize();
-	// TODO need debug
+void lookat(vector3f eye, vector3f center, vector3f up) {
+	vector3f z = (eye - center).normalize();
+	vector3f x = cross(up,z).normalize();
+	vector3f y = cross(z,x).normalize();
 	
-	ModelView = Matrix::identity(4);
+	ModelView = identity<matrix44,4>();
 
 	for (int i = 0; i < 3; i++) {
 		ModelView[0][i] = x[i];
@@ -258,7 +269,7 @@ void lookat(Vector3f eye, Vector3f center, Vector3f up) {
 }
 
 void viewport(int x, int y, int w, int h, int depth) {
-	ViewPort = Matrix::identity(4);
+	ViewPort = identity<matrix44, 4>();
 	ViewPort[0][3] = x + w / 2.f;
 	ViewPort[1][3] = y + h / 2.f;
 	ViewPort[2][3] = depth / 2.f;
@@ -269,7 +280,7 @@ void viewport(int x, int y, int w, int h, int depth) {
 }
 
 void projection(float coeff) {
-	Projection = Matrix::identity(4);
+	Projection = identity<matrix44, 4>();
 	Projection[3][2] = coeff;
 }
 

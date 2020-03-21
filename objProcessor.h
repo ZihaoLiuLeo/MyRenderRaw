@@ -1,7 +1,7 @@
 #ifndef __OBJPROCESSOR_H_
 #define __OBJPROCESSOR_H_
 #include <vector>
-#include "../Geometry/geometry.h"
+#include "../Geometry2/transform.h"
 #include "../ImageProcessor/TGAProcessor.h"
 
 class objPcs {
@@ -18,24 +18,24 @@ public:
 	bool getObjFile(const char* filename);
 	bool loadObj();
 	int getFaceNumber();
-	Vector3f getVertex(int i);
-	Vector3f getVertex(int iface, int n_tri_vertex);
-	Vector2f getTex(int i);
-	Vector3f getNorm(int iface, int ivertex);
+	vector3f getVertex(int i);
+	vector3f getVertex(int iface, int n_tri_vertex);
+	vector2f getTex(int i);
+	vector3f getNorm(int iface, int ivertex);
 	std::vector<int> face(int i);
-	Vector2f uv(int iface, int ivertex);
+	vector2f uv(int iface, int ivertex);
 	void load_texture(TGAProcessor *texture);
 	void load_normal(TGAProcessor *normal);
-	TGAColor diffuse(Vector2f uv);
-	Vector3f normal(Vector2f uv);
+	TGAColor diffuse(vector2f uv);
+	vector3f normal(vector2f uv);
 
 	~objPcs();
 private:
-	std::vector<Vector3f> vertex_;
+	std::vector<vector3f> vertex_;
 	// face: vertex/uv/normal
-	std::vector<std::vector<Vector3i>> face_;
-	std::vector<Vector2f> texcoord_;
-	std::vector<Vector3f> normal_;
+	std::vector<std::vector<vector3i>> face_;
+	std::vector<vector2f> texcoord_;
+	std::vector<vector3f> normal_;
 	std::ifstream ifs;
 	TGAProcessor *diffusemap_;
 	TGAProcessor *normalmap_;
