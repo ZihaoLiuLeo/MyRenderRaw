@@ -63,7 +63,7 @@ bool TGAProcessor::read_tga_file(const char *filename)
 		std::cerr << "bad bpp (or width/height) value." << std::endl;
 		return false;
 	}
-	unsigned long nbytes = width * height*bytespp;
+	unsigned long nbytes = width * height * bytespp;
 	data = new unsigned char[nbytes];
 	//image type 3: black and white(unmapped image)
 	//imgae type 2: true color image
@@ -99,7 +99,7 @@ bool TGAProcessor::read_tga_file(const char *filename)
 	{
 		flip_vertically();
 	}
-	if (!(header.imagedescriptor & 0x10))
+	if (header.imagedescriptor & 0x10)
 	{
 		flip_horizontally();
 	}
