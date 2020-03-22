@@ -26,8 +26,10 @@ public:
 	vector2f uv(int iface, int ivertex);
 	void load_texture(TGAProcessor *texture);
 	void load_normal(TGAProcessor *normal);
+	void load_specular(TGAProcessor *spec);
 	TGAColor diffuse(vector2f uv);
 	vector3f normal(vector2f uv);
+	float specular(vector2f uv);
 
 	~objPcs();
 private:
@@ -39,6 +41,7 @@ private:
 	std::ifstream ifs;
 	TGAProcessor *diffusemap_;
 	TGAProcessor *normalmap_;
+	TGAProcessor *specularmap_;
 };
 
 #endif // !__OBJPRCESSOR_H_

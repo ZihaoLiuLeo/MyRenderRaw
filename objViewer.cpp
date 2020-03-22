@@ -7,7 +7,6 @@
 #include "../Geometry2/transform.h"
 
 using Optr = std::shared_ptr<objPcs>;
-
 using Tptr = std::shared_ptr<TGAProcessor>;
 
 Optr objpcs(new objPcs("../obj/african_head.obj"));
@@ -21,6 +20,10 @@ vector3f eye(1, 1, 3);
 vector3f center(0, 0, 0);
 vector3f up(0, 1, 0);
 vector3f light_dir(1, 1, 1);
+
+float ambient;
+float coeff_diff;
+float coeff_spec;
 
 class GouraudShader : public IShader {
 public:
@@ -71,12 +74,16 @@ public:
 
 	virtual bool fragment(vector3f bar, TGAColor &color) override {
 		vector2f uv = vary_uv * bar;
-		vector3f normal, light;
+		vector3f normal, light, reflect;
 		normal = proj<3>(uniform_MIT * homorize<4>(objpcs->normal(uv))).normalize();
 		light = proj<3>(uniform_M * homorize<4>(light_dir)).normalize();
+		reflect = (normal * (normal*light*2.f) - light).normalize();
 
-		float intensity = std::max(0.f, normal*light);
-		color = objpcs->diffuse(uv)*intensity;
+		float specular = pow(std::max(0.f, reflect.z), objpcs->specular(uv));
+		float diffuse = std::max(0.f, normal*light);
+		TGAColor temp = objpcs->diffuse(uv);
+		color = temp;
+		for (int i = 0; i < 3; i++) { color[i] = std::min<float>(ambient + temp[i] * (coeff_diff*diffuse + coeff_spec*specular), 255); }
 		return false;
 	}
 };
@@ -86,12 +93,19 @@ public:
 int main() {
 	TGAProcessor* texpcs = new TGAProcessor();
 	TGAProcessor* normpcs = new TGAProcessor();
+	TGAProcessor* specpcs = new TGAProcessor();
 	objpcs->loadObj();
 	texpcs->read_tga_file("../obj/african_head_diffuse.tga");
 	normpcs->read_tga_file("../obj/african_head_nm.tga");
+	specpcs->read_tga_file("../obj/african_head_spec.tga");
 	
 	objpcs->load_texture(texpcs);
 	objpcs->load_normal(normpcs);
+	objpcs->load_specular(specpcs);
+
+	ambient = 10;
+	coeff_diff = 1;
+	coeff_spec = 0.4;
 
 	lookat(eye, center, up);
 	viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
@@ -104,7 +118,8 @@ int main() {
 	Shader shader;
 	shader.calcTransform();
 	shader.uniform_M = Projection * ModelView;
-	shader.uniform_MIT = shader.uniform_M.invert_transpose();
+	shader.uniform_MIT = (Projection*ModelView).invert_transpose();
+
 	for (int i = 0; i < objpcs->getFaceNumber(); i++) {
 		vector4f screen_coords[3];
 		for (int j = 0; j < 3; j++) {
@@ -115,7 +130,7 @@ int main() {
 
 	std::cout << "finished writing." << std::endl;
 	tgapcs->flip_vertically();
-	tgapcs->write_tga_file("../output/african_head_new.tga");
+	tgapcs->write_tga_file("../output/african_head_phong.tga");
 	return 0;
 }
 
