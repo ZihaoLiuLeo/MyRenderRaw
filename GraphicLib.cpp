@@ -69,8 +69,7 @@ void scanline_triangle(vector2i t0, vector2i t1, vector2i t2, TGAProcessor &imag
 }
 
 // berycentric method to determine if a pixel point is inside a triangle
-vector3f barycentric_point(vector2f *pts, vector2f p) {
-	assert(pts != nullptr);
+vector3f barycentric_point(Matrix<3,2,float> pts, vector2f p) {
 	vector3f u = cross(vector3f(pts[2][0]-pts[0][0], pts[1][0]-pts[0][0], pts[0][0]-p[0]), 
 		vector3f(pts[2][1]-pts[0][1], pts[1][1]-pts[0][1], pts[0][1]-p[1]) );
 	if (std::abs(u[2]) < 1e-2) return vector3f(-1, 1, 1);
@@ -212,31 +211,38 @@ void triangle_gouroud(
 }
 
 void triangle(
-	vector4f* t,
+	Matrix<4,3,float> &t,
 	IShader& shader,
 	TGAProcessor& image,
-	int* zbuffer,
+	float* zbuffer,
 	int width) {
+
+	Matrix<3, 4, float> pts = (ViewPort*t).transpose();
+	Matrix<3, 2, float> pts2;
+	for (int i = 0; i < 3; i++) { pts2[i] = proj<2>(pts[i] / pts[i][3]); }
+
 	vector2i bbmin, bbmax;
-	bbmin.x = std::min(t[0][0] / t[0][3], std::min(t[1][0] / t[1][3], t[2][0] / t[2][3]));
-	bbmin.y = std::min(t[0][1] / t[0][3], std::min(t[1][1] / t[1][3], t[2][1] / t[2][3]));
-	bbmax.x = std::max(t[0][0] / t[0][3], std::max(t[1][0] / t[1][3], t[2][0] / t[2][3]));
-	bbmax.y = std::max(t[0][1] / t[0][3], std::max(t[1][1] / t[1][3], t[2][1] / t[2][3]));
+	bbmin.x = std::min(pts2[0][0], std::min(pts2[1][0], pts2[2][0]));
+	bbmin.y = std::min(pts2[0][1], std::min(pts2[1][1], pts2[2][1]));
+	bbmax.x = std::max(pts2[0][0], std::max(pts2[1][0], pts2[2][0]));
+	bbmax.y = std::max(pts2[0][1], std::max(pts2[1][1], pts2[2][1]));
 	vector2i p;
 	TGAColor color;
-	for (p.x = bbmin.x; p.x <= bbmax.x; p.x = p.x + 1) {
+	for (p.x = bbmin.x; p.x <= bbmax.x; p.x++) {
 		for (p.y = bbmin.y; p.y <= bbmax.y;  p.y++) {
-			vector2f pts[3];
-			for (int i = 0; i < 3; i++) { pts[i] = proj<2>(t[i] / t[i][3]); }
-			vector3f c = barycentric_point(pts, p);
+			vector3f c = barycentric_point(pts2, p);
+			vector3f bc_clip = vector3f(c.x / pts[0][3], c.y / pts[1][3], c.z / pts[2][3]);
+			bc_clip = bc_clip / (bc_clip.x + bc_clip.y + bc_clip.z);
+			float frag_depth = t[2] * bc_clip;
+			
 			//  z/w need to be used to calculate the zbuffer depth
-			float z = t[0][2] * c.x + t[1][2] * c.y + t[2][2] * c.z;
+			/*float z = t[0][2] * c.x + t[1][2] * c.y + t[2][2] * c.z;
 			float w = t[0][3] * c.x + t[1][3] * c.y + t[2][3] * c.z;
-			int depth = std::max(0, std::min(255, int(z / w + .5)));
-			if (c.x < 0 || c.y < 0 || c.z < 0 || zbuffer[p.x+p.y*width]>depth) continue;
-			bool discard = shader.fragment(c, color);
+			int depth = std::max(0, std::min(255, int(z / w + .5)));*/
+			if (c.x < 0 || c.y < 0 || c.z < 0 || zbuffer[p.x+p.y*width]>frag_depth) continue;
+			bool discard = shader.fragment(bc_clip, color);
 			if (!discard) {
-				zbuffer[p.x + p.y*width] = depth;
+				zbuffer[p.x + p.y*width] = frag_depth;
 				image.set(p.x, p.y, color);
 			}
 			/*p.z = 0;
@@ -258,25 +264,27 @@ void lookat(vector3f eye, vector3f center, vector3f up) {
 	vector3f x = cross(up,z).normalize();
 	vector3f y = cross(z,x).normalize();
 	
-	ModelView = identity<matrix44,4>();
+	matrix44 minv = identity<matrix44,4>();
+	matrix44 Tr = identity<matrix44, 4>();
 
 	for (int i = 0; i < 3; i++) {
-		ModelView[0][i] = x[i];
-		ModelView[1][i] = y[i];
-		ModelView[2][i] = z[i];
-		ModelView[i][3] = -center[i];
+		minv[0][i] = x[i];
+		minv[1][i] = y[i];
+		minv[2][i] = z[i];
+		Tr[i][3] = -center[i];
 	}
+	ModelView = minv * Tr;
 }
 
-void viewport(int x, int y, int w, int h, int depth) {
+void viewport(int x, int y, int w, int h, float depth) {
 	ViewPort = identity<matrix44, 4>();
 	ViewPort[0][3] = x + w / 2.f;
 	ViewPort[1][3] = y + h / 2.f;
-	ViewPort[2][3] = depth / 2.f;
+	ViewPort[2][3] = 1.f;
 
 	ViewPort[0][0] = w / 2.f;
 	ViewPort[1][1] = h / 2.f;
-	ViewPort[2][2] = depth / 2.f;
+	ViewPort[2][2] = 0;
 }
 
 void projection(float coeff) {

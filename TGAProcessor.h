@@ -66,6 +66,13 @@ public:
 	}
 };
 
+inline std::ostream& operator<<(std::ostream& os, const TGAColor& c) {
+	for (int i = 0; i < 4; i++) {
+		os << (float)c.bgra[i] << " ";
+	}
+	return os;
+}
+
 class TGAProcessor
 {
 public:

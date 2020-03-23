@@ -183,13 +183,14 @@ struct Matrix {
 public:
 	Matrix() {}
 
-	Matrix<R, C, T>& transpose();
+	Matrix<C, R, T>& transpose();
 
 	T det() const;
 	T cofactor(size_t row, size_t col) const;
 	Matrix<R, C, T> adjugate() const;
 	Matrix<R - 1, C - 1, T> minor(size_t row, size_t col) const;
 	Matrix<R, C, T> invert_transpose() const;
+	Matrix<R, C, T> invert() const;
 
 	inline Vector<C, T>& operator[](const size_t idx) {
 		assert(idx < R);
@@ -378,25 +379,26 @@ T transposeMat(T mat) {
 
 // override in the matrix class
 template<size_t R, size_t C, typename T>
-inline Matrix<R, C, T>& Matrix<R, C, T>::transpose() {
-	for (size_t i = 0; i < R; i++) {
-		for (size_t j = 0; j < C; j++) {
-			std::swap(rows[i][j], rows[j][i]);
-		}
+inline Matrix<C, R, T>& Matrix<R, C, T>::transpose() {
+	Matrix<C, R, T> ret;
+	for (size_t i = 0; i < C; i++) {
+		ret[i] = this->col(i);
 	}
-	return *this;
+	return ret;
 }
 
 template<>
 inline matrix33& matrix33::transpose() {
-	TransMat(matrix33, *this, 3);
-	return *this;
+	matrix33 ret = *this;
+	TransMat(matrix33, ret, 3);
+	return ret;
 }
 
 template<>
 inline matrix44& matrix44::transpose() {
-	TransMat(matrix44, *this, 4);
-	return *this;
+	matrix44 ret = *this;
+	TransMat(matrix44, ret, 4);
+	return ret;
 }
 
 /////////////////////////////////////////
@@ -534,6 +536,11 @@ inline Matrix<R, C, T> Matrix<R, C, T>::invert_transpose() const {
 	Matrix<R, C, T> ret = adjugate();
 	T temp = ret[0] * rows[0];
 	return ret / temp;
+}
+
+template<size_t R, size_t C, typename T>
+inline Matrix<R, C, T> Matrix<R, C, T>::invert() const {
+	return invert_transpose().transpose();
 }
 
 template <> template <>
